@@ -43,6 +43,14 @@ function showToast(message, isError = false) {
     showToast.timer = window.setTimeout(() => toast.classList.remove('visible'), 3300);
 }
 
+function friendlyMessage(error) {
+    const messages = {
+        ACTIVE_LOAN_ALREADY_EXISTS: 'This book is already on your shelf.',
+        BOOK_UNAVAILABLE: 'All digital copies of this book are currently borrowed.',
+        INVALID_USER: 'Please enter a valid reader identity.'
+    };
+    return messages[error.code] || error.message;
+}
 function renderBooks() {
     const grid = $('#book-grid');
     $('#result-count').textContent = `${state.totalElements || 0} ${state.totalElements === 1 ? 'title' : 'titles'}`;
@@ -78,12 +86,12 @@ function renderLoans() {
     $('#loan-count').textContent = state.loans.length;
     const list = $('#loan-list');
     if (!state.loans.length) {
-        list.innerHTML = '<div class="empty-state"><span class="empty-symbol">＋</span><strong>Your shelf is open.</strong><span>Borrow a title to start reading.</span></div>';
+        list.innerHTML = '<div class="empty-state"><span class="empty-symbol">＋</span><strong>Your shelf is open.</strong><span>Borrow a book to start reading.</span></div>';
         return;
     }
     list.innerHTML = state.loans.map((loan) => `<div class="loan-item">
         <div class="loan-thumb">READ</div><div><strong title="${escapeHtml(loan.bookTitle)}">${escapeHtml(loan.bookTitle)}</strong>
-        <small>Due ${formatDate(loan.dueAt)}</small><button class="return-button" type="button" data-loan-id="${loan.loanId}">Return title ↗</button></div>
+        <small>Due ${formatDate(loan.dueAt)}</small><button class="return-button" type="button" data-loan-id="${loan.loanId}">Return book ↗</button></div>
     </div>`).join('');
     list.querySelectorAll('[data-loan-id]').forEach((button) => button.addEventListener('click', () => returnLoan(button.dataset.loanId, button)));
 }
@@ -102,7 +110,7 @@ async function loadBooks() {
     } catch (error) {
         $('#book-grid').innerHTML = `<div class="error-state"><span>${escapeHtml(error.message)}</span><button id="retry-books" class="text-button" type="button">Try again ↗</button></div>`;
         $('#retry-books').addEventListener('click', loadBooks);
-        showToast(error.message, true);
+        showToast(friendlyMessage(error), true);
     }
 }
 
@@ -116,14 +124,17 @@ async function loadLoans() {
     try {
         state.loans = await api('/api/loans/current', {headers: {'X-User-Id': userId()}});
         renderLoans();
-        if (state.books.length) renderBooks();
     } catch (error) {
         $('#loan-list').innerHTML = `<div class="error-state"><span>${escapeHtml(error.message)}</span><button id="retry-loans" class="text-button" type="button">Try again ↗</button></div>`;
         $('#retry-loans').addEventListener('click', loadLoans);
-        showToast(error.message, true);
+        showToast(friendlyMessage(error), true);
     }
 }
 
+async function refreshLibrary() {
+    await loadLoans();
+    await loadBooks();
+}
 async function openBook(bookId) {
     try {
         state.activeBook = await api(`/api/books/${bookId}`);
@@ -135,24 +146,32 @@ async function openBook(bookId) {
         $('#modal-description').textContent = book.description;
         $('#modal-availability-value').textContent = `${book.availableLicenses} of ${book.totalLicenses} available`;
         $('#borrow-button').disabled = book.availableLicenses < 1;
-        $('#borrow-button').textContent = book.availableLicenses < 1 ? 'Currently unavailable' : 'Borrow this title ↗';
+        $('#borrow-button').textContent = book.availableLicenses < 1 ? 'Currently unavailable' : 'Borrow book ↗';
         $('#book-modal').hidden = false;
         document.body.style.overflow = 'hidden';
-    } catch (error) { showToast(error.message, true); }
+    } catch (error) {
+        showToast(friendlyMessage(error), true);
+    }
 }
 
 async function borrowBook() {
     if (!state.activeBook) return;
     if (!userId()) { showToast('Enter a reader identity first.', true); return; }
     const button = $('#borrow-button');
+    const borrowedTitle = state.activeBook.title;
     button.disabled = true;
     try {
         await api('/api/loans', {method: 'POST', body: JSON.stringify({bookId: state.activeBook.id})});
         closeModal();
-        showToast(`${state.activeBook.title} added to your shelf.`);
-        await Promise.all([loadBooks(), loadLoans()]);
+        showToast(`${borrowedTitle} added to your shelf.`);
+        await refreshLibrary();
     } catch (error) {
-        showToast(error.message, true);
+        const message = friendlyMessage(error);
+        if (error.status === 409) {
+            closeModal();
+            await refreshLibrary();
+        }
+        showToast(message, true);
         button.disabled = false;
     }
 }
@@ -161,9 +180,12 @@ async function returnLoan(loanId, button) {
     if (button) button.disabled = true;
     try {
         await api(`/api/loans/${loanId}/return`, {method: 'PUT'});
-        showToast('Title returned to the collection.');
-        await Promise.all([loadBooks(), loadLoans()]);
-    } catch (error) { showToast(error.message, true); }
+        showToast('Book returned to the collection.');
+        await refreshLibrary();
+    } catch (error) {
+        showToast(friendlyMessage(error), true);
+        if (button) button.disabled = false;
+    }
 }
 
 function closeModal() { $('#book-modal').hidden = true; document.body.style.overflow = ''; state.activeBook = null; }
@@ -179,7 +201,7 @@ $('#next-page').addEventListener('click', () => { if (state.page < state.totalPa
 $('#borrow-button').addEventListener('click', borrowBook);
 document.querySelectorAll('[data-close-modal]').forEach((element) => element.addEventListener('click', closeModal));
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !$('#book-modal').hidden) closeModal(); });
-$('#user-id').addEventListener('change', () => { localStorage.setItem('elibrary-user-id', userId()); loadLoans(); });
+$('#user-id').addEventListener('change', () => { localStorage.setItem('elibrary-user-id', userId()); refreshLibrary(); });
 document.querySelectorAll('[data-category]').forEach((button) => button.addEventListener('click', () => {
     state.category = button.dataset.category;
     state.page = 0;
@@ -189,5 +211,4 @@ document.querySelectorAll('[data-category]').forEach((button) => button.addEvent
 
 const savedUserId = localStorage.getItem('elibrary-user-id');
 if (savedUserId) $('#user-id').value = savedUserId;
-loadBooks();
-loadLoans();
+refreshLibrary();
