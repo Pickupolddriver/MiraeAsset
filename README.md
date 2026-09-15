@@ -1,0 +1,67 @@
+# E-Library Service
+
+This repository contains a Spring Boot implementation of the Mirae Asset backend take-home assignment for an e-library service.
+
+## Scope
+
+The service is user-facing. It supports browsing books, viewing book details, borrowing a digital license, returning a loan, and listing the current user's active loans. The phrase “currently borrowed books” is interpreted as the requesting user's active loans.
+
+The implementation intentionally does not include administrator APIs, authentication, book catalog management, waitlists, renewals, fines, or digital file storage and streaming. `X-User-Id` is a deliberately small identity boundary for the assignment; a real deployment would replace it with an authenticated principal.
+
+Each book has a finite number of simultaneous digital licenses. This makes the borrow operation meaningful and provides a concurrency boundary. A future product decision may change this to unlimited licenses or add a waitlist.
+
+## Design choices
+
+- `Book` stores catalog metadata and the current license availability.
+- `Loan` stores the immutable borrowing event and its optional return time. Active status is derived from `returnedAt == null`.
+- Borrow and return operations lock the corresponding `Book` row with `PESSIMISTIC_WRITE` inside a short database transaction.
+- Operations for the same book are serialized by the database row lock. Operations for different books can proceed concurrently.
+- Returning a loan is idempotent. Repeating a return returns the already-returned loan and does not release a second license.
+- Borrowing is rejected with `409` when the user already has an active loan or no license is available.
+- H2 is an in-memory single-instance database for this assignment. A multi-instance production deployment would use a shared transactional database such as PostgreSQL.
+- All timestamps use UTC through an injectable `Clock`, which keeps tests deterministic.
+
+## API
+
+Swagger UI is available at `/swagger-ui.html` when the application is running. OpenAPI JSON is available at `/v3/api-docs`.
+
+```text
+GET  /api/books?q=java&page=0&size=20
+GET  /api/books/{bookId}
+
+POST /api/loans
+     X-User-Id: user-1
+     { "bookId": 1 }
+
+GET  /api/loans/current
+     X-User-Id: user-1
+
+PUT  /api/loans/{loanId}/return
+     X-User-Id: user-1
+```
+
+Errors use Spring's `ProblemDetail` shape and include a stable application code, such as `BOOK_NOT_FOUND`, `BOOK_UNAVAILABLE`, `ACTIVE_LOAN_ALREADY_EXISTS`, or `LOAN_NOT_OWNED_BY_USER`.
+
+## Run and verify
+
+Requirements: Java 21 or newer and Maven 3.9 or newer.
+
+```bash
+mvn spring-boot:run
+mvn clean verify
+```
+
+`mvn clean verify` runs unit and integration tests, including a concurrency test where ten users compete for three licenses. It also generates the JaCoCo report at `target/site/jacoco/index.html`.
+
+## Concurrency semantics
+
+The service does not promise FIFO ordering for simultaneous HTTP requests. When a return and a borrow race for the last license, whichever transaction obtains the book row lock first is the logical first operation. Both outcomes are valid as long as the database invariants remain true:
+
+```text
+0 <= availableLicenses <= totalLicenses
+active loans = total licenses - available licenses
+one active loan per user and book
+an active loan transitions to returned at most once
+```
+
+If FIFO fairness or automatic allocation after a return becomes a requirement, the next design would add a per-book waitlist with an explicit sequence number. That is intentionally outside this take-home scope.

@@ -1,0 +1,8 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.log
+*.iml
+.idea/
+.vscode/
+*.h2.db
+hs_err_pid*

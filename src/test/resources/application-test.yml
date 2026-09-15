@@ -1,0 +1,9 @@
+app:
+  seed:
+    enabled: false
+
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
