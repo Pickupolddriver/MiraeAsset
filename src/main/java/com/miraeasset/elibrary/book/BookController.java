@@ -25,9 +25,10 @@ public class BookController {
     @Operation(summary = "Browse books")
     public PageResponse<BookSummaryResponse> list(
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return bookService.list(q, page, size);
+        return bookService.list(q, category, page, size);
     }
 
     @GetMapping("/{bookId}")

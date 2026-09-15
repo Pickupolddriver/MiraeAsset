@@ -48,7 +48,7 @@ class LibraryApiTest {
     void canBrowseAndViewBookDetails() throws Exception {
         Book book = bookRepository.save(Book.create("isbn-api", "API Book", "API Author", "A description", "Tech", 2));
 
-        mockMvc.perform(get("/api/books").param("q", "api"))
+        mockMvc.perform(get("/api/books").param("q", "api").param("category", "Tech"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].title").value("API Book"))

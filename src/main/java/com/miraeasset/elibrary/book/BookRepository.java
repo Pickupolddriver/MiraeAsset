@@ -12,8 +12,16 @@ import java.util.Optional;
 
 public interface BookRepository extends JpaRepository<Book, Long> {
 
-    Page<Book> findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(
-            String title, String author, Pageable pageable);
+    @Query("""
+            select b from Book b
+            where (:query is null or :query = ''
+                or lower(b.title) like lower(concat('%', :query, '%'))
+                or lower(b.author) like lower(concat('%', :query, '%')))
+              and (:category is null or :category = '' or lower(b.category) = lower(:category))
+            """)
+    Page<Book> search(@Param("query") String query,
+                      @Param("category") String category,
+                      Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select b from Book b where b.id = :id")

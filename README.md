@@ -32,12 +32,43 @@ The concurrency boundary is the book row rather than a global application lock. 
 The API deliberately separates client errors from business conflicts: malformed input, invalid pagination, and invalid user headers return `400`; a missing book or loan returns `404`; returning another user's loan returns `403`; and duplicate or unavailable borrowing returns `409`. Unexpected framework serialization details are not exposed as the public contract.
 
 The test suite covers normal API flow, validation and malformed requests, missing resources, ownership checks, duplicate borrowing, unavailable licenses, deterministic pagination, ten-user license contention, same-user duplicate borrowing, and concurrent repeated returns. The concurrency tests verify invariants rather than request completion order because FIFO ordering is not part of the current product requirement.
+## Architecture
+
+The repository contains two architecture views:
+
+### Take-home deployment
+
+```mermaid
+flowchart LR
+    client[Client] --> api[Spring Boot API]
+    api --> services[BookService / LoanService]
+    services --> repos[Repositories]
+    repos --> h2[(H2 in-memory DB)]
+    loan[Borrow / Return transaction] -. PESSIMISTIC_WRITE .-> h2
+```
+
+### Production deployment
+
+```mermaid
+flowchart TB
+    client[Clients] --> edge[DNS + CDN + WAF + Load Balancer]
+    edge --> apps[Stateless Spring Boot instances<br/>across multiple AZs]
+    apps --> cache[(Redis Cluster)]
+    apps --> primary[(PostgreSQL Primary)]
+    primary --> standby[(HA Standby)]
+    apps --> replicas[(Read Replicas)]
+    primary --> outbox[Outbox] --> queue[(Queue)]
+    queue --> workers[Async Workers]
+    apps --> storage[(Object Storage + Content CDN)]
+```
+
+The production diagram is intentionally different from the assignment implementation. Browse traffic can use Redis and read replicas, but borrow and return must use the PostgreSQL primary in one transaction. Inventory availability is never decided from a cache or a lagging replica. The complete diagrams, routing rules, failure boundaries, and trade-offs are documented in [docs/architecture.md](docs/architecture.md).
 ## API
 
 Swagger UI is available at `/swagger-ui.html` when the application is running. OpenAPI JSON is available at `/v3/api-docs`.
 
 ```text
-GET  /api/books?q=java&page=0&size=20
+GET  /api/books?q=java&category=Programming&page=0&size=20
 GET  /api/books/{bookId}
 
 POST /api/loans

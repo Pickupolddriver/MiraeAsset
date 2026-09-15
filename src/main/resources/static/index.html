@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#043B72">
+    <meta name="description" content="Mirae Asset E-Library — a digital collection for curious minds.">
+    <title>MIRAE ASSET | E-Library</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="app-shell">
+    <header class="site-header">
+        <a class="brand" href="#discover" aria-label="Mirae Asset E-Library home">
+            <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span><strong>MIRAE ASSET</strong><small>E-LIBRARY</small></span>
+        </a>
+        <nav class="top-nav" aria-label="Main navigation">
+            <a class="active" href="#discover">Discover</a>
+            <a href="#shelf">My shelf <span id="loan-count" class="nav-count">0</span></a>
+        </nav>
+        <div class="identity-control">
+            <label for="user-id">Reader</label>
+            <input id="user-id" value="user-001" maxlength="100" aria-label="Reader identity">
+            <span class="avatar" aria-hidden="true">U</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="discover" class="hero-section">
+            <div class="hero-copy">
+                <p class="eyebrow"><span></span> DIGITAL KNOWLEDGE, WITH PERSPECTIVE</p>
+                <h1>Open a new<br><em>point of view.</em></h1>
+                <p class="hero-description">A focused collection of ideas, methods and stories — ready when you are.</p>
+                <div class="search-wrap">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 5 5"></path></svg>
+                    <input id="search-input" type="search" placeholder="Search by title or author" autocomplete="off">
+                    <button id="search-button" class="search-button" type="button">Search</button>
+                </div>
+            </div>
+            <div class="hero-art" aria-hidden="true">
+                <div class="orbit orbit-one"></div>
+                <div class="orbit orbit-two"></div>
+                <div class="signal signal-one"></div>
+                <div class="signal signal-two"></div>
+                <div class="hero-card">
+                    <span class="hero-card-label">CURATED FOR YOU</span>
+                    <strong>Read beyond<br>the obvious.</strong>
+                    <span class="hero-card-line"></span>
+                    <small>Ideas compound.</small>
+                </div>
+                <span class="art-dot dot-one"></span><span class="art-dot dot-two"></span><span class="art-dot dot-three"></span>
+            </div>
+        </section>
+
+        <section class="content-layout">
+            <div class="catalog-column">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">THE COLLECTION</p>
+                        <h2>Explore the library</h2>
+                    </div>
+                    <div class="catalog-meta"><span id="result-count">0 titles</span><span class="meta-divider"></span><span id="page-label">Page 1</span></div>
+                </div>
+                <div id="category-filters" class="category-filters" role="list" aria-label="Book categories">
+                    <button class="filter-chip selected" data-category="" type="button">All titles</button>
+                    <button class="filter-chip" data-category="Software Engineering" type="button">Engineering</button>
+                    <button class="filter-chip" data-category="Programming" type="button">Programming</button>
+                </div>
+                <div id="book-grid" class="book-grid" aria-live="polite">
+                    <div class="loading-state"><span class="spinner"></span>Loading the collection...</div>
+                </div>
+                <div id="pagination" class="pagination" hidden>
+                    <button id="previous-page" type="button" aria-label="Previous page">←</button>
+                    <span id="pagination-label">1 / 1</span>
+                    <button id="next-page" type="button" aria-label="Next page">→</button>
+                </div>
+            </div>
+
+            <aside id="shelf" class="shelf-panel">
+                <div class="shelf-heading">
+                    <div><p class="eyebrow">YOUR READING SPACE</p><h2>My shelf</h2></div>
+                    <span class="shelf-icon" aria-hidden="true">↗</span>
+                </div>
+                <p class="shelf-intro">Your active digital loans, kept close at hand.</p>
+                <div id="loan-list" class="loan-list" aria-live="polite">
+                    <div class="empty-state"><span class="empty-symbol">＋</span><strong>Your shelf is open.</strong><span>Borrow a title to start reading.</span></div>
+                </div>
+                <div class="shelf-footer"><span>Loans are held for 14 days</span><span class="footer-rule"></span></div>
+            </aside>
+        </section>
+    </main>
+
+    <footer class="site-footer"><span>© 2026 MIRAE ASSET E-LIBRARY</span><span>PERMANENTLY CURIOUS <b>↗</b></span></footer>
+</div>
+
+<div id="book-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <button class="modal-close" type="button" data-close-modal aria-label="Close book details">×</button>
+        <div id="modal-accent" class="modal-accent"></div>
+        <p class="eyebrow">BOOK DETAILS</p>
+        <h2 id="modal-title">Book title</h2>
+        <p id="modal-author" class="modal-author"></p>
+        <div class="modal-facts"><span id="modal-category"></span><span id="modal-isbn"></span></div>
+        <p id="modal-description" class="modal-description"></p>
+        <div class="modal-availability"><span>Digital availability</span><strong id="modal-availability-value"></strong></div>
+        <button id="borrow-button" class="primary-button" type="button">Borrow this title <span>↗</span></button>
+    </section>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body>
+</html>
