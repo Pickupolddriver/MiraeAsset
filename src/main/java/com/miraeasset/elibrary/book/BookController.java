@@ -2,11 +2,11 @@ package com.miraeasset.elibrary.book;
 
 import com.miraeasset.elibrary.book.dto.BookDetailResponse;
 import com.miraeasset.elibrary.book.dto.BookSummaryResponse;
+import com.miraeasset.elibrary.common.dto.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +23,7 @@ public class BookController {
 
     @GetMapping
     @Operation(summary = "Browse books")
-    public Page<BookSummaryResponse> list(
+    public PageResponse<BookSummaryResponse> list(
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {

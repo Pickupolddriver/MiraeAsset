@@ -6,6 +6,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.stream.Collectors;
 
@@ -27,6 +29,11 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.FORBIDDEN, exception.getCode(), exception.getMessage());
     }
 
+    @ExceptionHandler(InvalidRequestException.class)
+    ProblemDetail handleInvalidRequest(InvalidRequestException exception) {
+        return problem(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ProblemDetail handleValidation(MethodArgumentNotValidException exception) {
         String detail = exception.getBindingResult().getFieldErrors().stream()
@@ -38,6 +45,17 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MissingRequestHeaderException.class)
     ProblemDetail handleMissingHeader(MissingRequestHeaderException exception) {
         return problem(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "Missing required header: " + exception.getHeaderName());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ProblemDetail handleUnreadableRequest(HttpMessageNotReadableException exception) {
+        return problem(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "Request body is missing or malformed");
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ProblemDetail handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
+        return problem(HttpStatus.BAD_REQUEST, "INVALID_REQUEST",
+                "Invalid value for parameter: " + exception.getName());
     }
 
     private ProblemDetail problem(HttpStatus status, String code, String detail) {

@@ -20,7 +20,18 @@ Each book has a finite number of simultaneous digital licenses. This makes the b
 - Borrowing is rejected with `409` when the user already has an active loan or no license is available.
 - H2 is an in-memory single-instance database for this assignment. A multi-instance production deployment would use a shared transactional database such as PostgreSQL.
 - All timestamps use UTC through an injectable `Clock`, which keeps tests deterministic.
+- The books endpoint returns an explicit pagination envelope instead of exposing Spring Data `PageImpl`, keeping the HTTP contract independent of framework serialization details.
+- Pagination parameters are validated (`page >= 0`, `1 <= size <= 50`) and malformed JSON, type mismatches, missing headers, and domain errors are mapped to the same `ProblemDetail` style.
+- A return refreshes the loan entity after acquiring the book lock. This closes the stale first-level-cache window when multiple requests return the same loan concurrently.
 
+
+## Review notes and trade-offs
+
+The concurrency boundary is the book row rather than a global application lock. This keeps the critical section small: all operations that change a book's license count serialize for that book, while unrelated books can proceed in parallel. The loan is refreshed after the book lock is acquired so concurrent repeated returns remain idempotent even when the transaction initially read an older loan state.
+
+The API deliberately separates client errors from business conflicts: malformed input, invalid pagination, and invalid user headers return `400`; a missing book or loan returns `404`; returning another user's loan returns `403`; and duplicate or unavailable borrowing returns `409`. Unexpected framework serialization details are not exposed as the public contract.
+
+The test suite covers normal API flow, validation and malformed requests, missing resources, ownership checks, duplicate borrowing, unavailable licenses, deterministic pagination, ten-user license contention, same-user duplicate borrowing, and concurrent repeated returns. The concurrency tests verify invariants rather than request completion order because FIFO ordering is not part of the current product requirement.
 ## API
 
 Swagger UI is available at `/swagger-ui.html` when the application is running. OpenAPI JSON is available at `/v3/api-docs`.

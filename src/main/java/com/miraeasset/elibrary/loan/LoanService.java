@@ -4,9 +4,12 @@ import com.miraeasset.elibrary.book.Book;
 import com.miraeasset.elibrary.book.BookRepository;
 import com.miraeasset.elibrary.common.BusinessConflictException;
 import com.miraeasset.elibrary.common.ForbiddenOperationException;
+import com.miraeasset.elibrary.common.InvalidRequestException;
 import com.miraeasset.elibrary.common.ResourceNotFoundException;
 import com.miraeasset.elibrary.loan.dto.BorrowBookRequest;
 import com.miraeasset.elibrary.loan.dto.LoanResponse;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +26,9 @@ public class LoanService {
     private final BookRepository bookRepository;
     private final LoanRepository loanRepository;
     private final Clock clock;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Transactional
     public LoanResponse borrow(String userId, BorrowBookRequest request) {
@@ -64,24 +70,28 @@ public class LoanService {
         Long bookId = initialLoan.getBook().getId();
         bookRepository.findByIdForUpdate(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("BOOK_NOT_FOUND", "Book does not exist"));
-        Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new ResourceNotFoundException("LOAN_NOT_FOUND", "Loan does not exist"));
-        if (!loan.getUserId().equals(userId)) {
+
+        // The loan may have been returned while this transaction waited for the book lock.
+        // Refresh it so a concurrent repeated return remains idempotent.
+        entityManager.refresh(initialLoan);
+        if (!initialLoan.getUserId().equals(userId)) {
             throw new ForbiddenOperationException("LOAN_NOT_OWNED_BY_USER", "The loan belongs to another user");
         }
-        if (!loan.isActive()) {
-            return LoanResponse.from(loan);
+        if (!initialLoan.isActive()) {
+            return LoanResponse.from(initialLoan);
         }
 
-        loan.markReturned(Instant.now(clock));
-        Book book = loan.getBook();
-        book.returnLicense();
-        return LoanResponse.from(loan);
+        initialLoan.markReturned(Instant.now(clock));
+        initialLoan.getBook().returnLicense();
+        return LoanResponse.from(initialLoan);
     }
 
     private void requireUser(String userId) {
         if (userId == null || userId.isBlank()) {
-            throw new BusinessConflictException("INVALID_USER", "X-User-Id must not be blank");
+            throw new InvalidRequestException("INVALID_USER", "X-User-Id must not be blank");
+        }
+        if (userId.length() > 100) {
+            throw new InvalidRequestException("INVALID_USER", "X-User-Id must not exceed 100 characters");
         }
     }
 }

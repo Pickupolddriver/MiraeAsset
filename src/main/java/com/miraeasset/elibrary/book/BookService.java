@@ -1,6 +1,8 @@
 package com.miraeasset.elibrary.book;
 
+import com.miraeasset.elibrary.common.InvalidRequestException;
 import com.miraeasset.elibrary.common.ResourceNotFoundException;
+import com.miraeasset.elibrary.common.dto.PageResponse;
 import com.miraeasset.elibrary.book.dto.BookDetailResponse;
 import com.miraeasset.elibrary.book.dto.BookSummaryResponse;
 import lombok.RequiredArgsConstructor;
@@ -17,15 +19,20 @@ public class BookService {
     private final BookRepository bookRepository;
 
     @Transactional(readOnly = true)
-    public Page<BookSummaryResponse> list(String query, int page, int size) {
-        int safePage = Math.max(page, 0);
-        int safeSize = Math.min(Math.max(size, 1), 50);
-        PageRequest pageRequest = PageRequest.of(safePage, safeSize, Sort.by("id").ascending());
+    public PageResponse<BookSummaryResponse> list(String query, int page, int size) {
+        if (page < 0) {
+            throw new InvalidRequestException("INVALID_PAGE", "page must not be negative");
+        }
+        if (size < 1 || size > 50) {
+            throw new InvalidRequestException("INVALID_PAGE_SIZE", "size must be between 1 and 50");
+        }
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("id").ascending());
         Page<Book> books = query == null || query.isBlank()
                 ? bookRepository.findAll(pageRequest)
                 : bookRepository.findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(
                         query.trim(), query.trim(), pageRequest);
-        return books.map(BookSummaryResponse::from);
+        return PageResponse.from(books.map(BookSummaryResponse::from));
     }
 
     @Transactional(readOnly = true)

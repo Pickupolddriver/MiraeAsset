@@ -41,19 +41,55 @@ class LoanConcurrencyTest {
     void onlyAvailableLicensesCanBeBorrowedConcurrently() throws Exception {
         Book book = bookRepository.save(Book.create("isbn-concurrent", "Concurrent Book", "Author", "Description", "Tech", 3));
         int attempts = 10;
+        List<Boolean> results = runConcurrently(attempts, () -> {
+            String userId = "user-" + Thread.currentThread().getId();
+            loanService.borrow(userId, new BorrowBookRequest(book.getId()));
+        });
+
+        assertThat(results.stream().filter(Boolean.TRUE::equals).count()).isEqualTo(3);
+        assertThat(bookRepository.findById(book.getId()).orElseThrow().getAvailableLicenses()).isZero();
+        assertThat(loanRepository.count()).isEqualTo(3);
+    }
+
+    @Test
+    void sameUserCanOnlyBorrowTheSameBookOnceConcurrently() throws Exception {
+        Book book = bookRepository.save(Book.create("isbn-same-user", "Same User Book", "Author", "Description", "Tech", 10));
+        int attempts = 10;
+        List<Boolean> results = runConcurrently(attempts, () ->
+                loanService.borrow("same-user", new BorrowBookRequest(book.getId())));
+
+        assertThat(results.stream().filter(Boolean.TRUE::equals).count()).isEqualTo(1);
+        assertThat(loanRepository.count()).isEqualTo(1);
+        assertThat(bookRepository.findById(book.getId()).orElseThrow().getAvailableLicenses()).isEqualTo(9);
+    }
+
+    @Test
+    void repeatedReturnsAreIdempotentWhenConcurrent() throws Exception {
+        Book book = bookRepository.save(Book.create("isbn-return-race", "Return Race Book", "Author", "Description", "Tech", 1));
+        var loan = loanService.borrow("return-user", new BorrowBookRequest(book.getId()));
+        int attempts = 10;
+
+        List<Boolean> results = runConcurrently(attempts, () ->
+                loanService.returnLoan("return-user", loan.loanId()));
+
+        assertThat(results).containsOnly(true);
+        assertThat(bookRepository.findById(book.getId()).orElseThrow().getAvailableLicenses()).isEqualTo(1);
+        assertThat(loanRepository.findByUserIdAndReturnedAtIsNullOrderByBorrowedAtDesc("return-user")).isEmpty();
+    }
+
+    private List<Boolean> runConcurrently(int attempts, Runnable action) throws Exception {
         CountDownLatch ready = new CountDownLatch(attempts);
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(attempts);
-        List<Future<Boolean>> results = new ArrayList<>();
+        List<Future<Boolean>> futures = new ArrayList<>();
 
         try {
             for (int i = 0; i < attempts; i++) {
-                String userId = "user-" + i;
-                results.add(executor.submit(() -> {
+                futures.add(executor.submit(() -> {
                     ready.countDown();
                     start.await();
                     try {
-                        loanService.borrow(userId, new BorrowBookRequest(book.getId()));
+                        action.run();
                         return true;
                     } catch (RuntimeException exception) {
                         return false;
@@ -63,18 +99,11 @@ class LoanConcurrencyTest {
             ready.await();
             start.countDown();
 
-            long successes = 0;
-            for (Future<Boolean> result : results) {
-                if (result.get()) {
-                    successes++;
-                }
+            List<Boolean> results = new ArrayList<>();
+            for (Future<Boolean> future : futures) {
+                results.add(future.get());
             }
-
-            assertThat(successes).isEqualTo(3);
-            assertThat(loanRepository.findByUserIdAndReturnedAtIsNullOrderByBorrowedAtDesc("user-0").size())
-                    .isLessThanOrEqualTo(1);
-            assertThat(bookRepository.findById(book.getId()).orElseThrow().getAvailableLicenses()).isZero();
-            assertThat(loanRepository.count()).isEqualTo(3);
+            return results;
         } finally {
             executor.shutdownNow();
         }

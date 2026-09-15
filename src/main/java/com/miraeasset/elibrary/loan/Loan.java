@@ -1,6 +1,7 @@
 package com.miraeasset.elibrary.loan;
 
 import com.miraeasset.elibrary.book.Book;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -33,9 +34,15 @@ public class Loan {
     @JoinColumn(name = "book_id", nullable = false)
     private Book book;
 
+    @Column(nullable = false, length = 100)
     private String userId;
+
+    @Column(nullable = false)
     private Instant borrowedAt;
+
+    @Column(nullable = false)
     private Instant dueAt;
+
     private Instant returnedAt;
 
     private Loan(Book book, String userId, Instant borrowedAt) {
