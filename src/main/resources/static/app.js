@@ -85,7 +85,7 @@ function renderLoans() {
         <div class="loan-thumb">READ</div><div><strong title="${escapeHtml(loan.bookTitle)}">${escapeHtml(loan.bookTitle)}</strong>
         <small>Due ${formatDate(loan.dueAt)}</small><button class="return-button" type="button" data-loan-id="${loan.loanId}">Return title ↗</button></div>
     </div>`).join('');
-    list.querySelectorAll('[data-loan-id]').forEach((button) => button.addEventListener('click', () => returnLoan(button.dataset.loanId)));
+    list.querySelectorAll('[data-loan-id]').forEach((button) => button.addEventListener('click', () => returnLoan(button.dataset.loanId, button)));
 }
 
 async function loadBooks() {
@@ -100,7 +100,8 @@ async function loadBooks() {
         state.totalPages = Math.max(payload.totalPages, 1);
         renderBooks();
     } catch (error) {
-        $('#book-grid').innerHTML = `<div class="error-state">${escapeHtml(error.message)}</div>`;
+        $('#book-grid').innerHTML = `<div class="error-state"><span>${escapeHtml(error.message)}</span><button id="retry-books" class="text-button" type="button">Try again ↗</button></div>`;
+        $('#retry-books').addEventListener('click', loadBooks);
         showToast(error.message, true);
     }
 }
@@ -111,11 +112,14 @@ async function loadLoans() {
         renderLoans();
         return;
     }
+    $('#loan-list').innerHTML = '<div class="loading-state"><span class="spinner"></span>Updating your shelf...</div>';
     try {
         state.loans = await api('/api/loans/current', {headers: {'X-User-Id': userId()}});
         renderLoans();
         if (state.books.length) renderBooks();
     } catch (error) {
+        $('#loan-list').innerHTML = `<div class="error-state"><span>${escapeHtml(error.message)}</span><button id="retry-loans" class="text-button" type="button">Try again ↗</button></div>`;
+        $('#retry-loans').addEventListener('click', loadLoans);
         showToast(error.message, true);
     }
 }
@@ -153,7 +157,8 @@ async function borrowBook() {
     }
 }
 
-async function returnLoan(loanId) {
+async function returnLoan(loanId, button) {
+    if (button) button.disabled = true;
     try {
         await api(`/api/loans/${loanId}/return`, {method: 'PUT'});
         showToast('Title returned to the collection.');
