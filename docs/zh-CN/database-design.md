@@ -53,7 +53,7 @@ CREATE TABLE books (
 | `book_id` | BIGINT | **NOT NULL, FK → books.id** | 被借书目，懒加载 |
 | `user_id` | VARCHAR(100) | NOT NULL | 借阅者（身份边界，非 FK） |
 | `borrowed_at` | TIMESTAMP WITH TIME ZONE | NOT NULL | UTC 时刻（`Instant`） |
-| `due_at` | TIMESTAMP WITH TIME ZONE | NOT NULL | `borrowed_at + 14 天` 推导 |
+| `due_at` | TIMESTAMP WITH TIME ZONE | NOT NULL | `borrowed_at + 14 天` 推导（**软约束，当前不强制**，见下） |
 | `returned_at` | TIMESTAMP WITH TIME ZONE | NULL 表示活跃 | 归还时刻 |
 
 ```sql
@@ -69,6 +69,8 @@ CREATE TABLE loans (
 ```
 
 **Loan 的主键用 UUID 而非自增**：避免将 `book_id`（千级）连同自增 id 暴露在 URI 中，杜绝借阅记录被顺序枚举；归还/详情通过该不透明 id 定位，避免逐号遍历。
+
+**`due_at` 是软约束，当前不强制执行**：`isActive()` 只以 `returned_at IS NULL` 判定，`due_at` 不参与任何查询或借/还判责，也不存在定时回收任务。一个逾期未归的借阅会持续占用授权，直到用户手动归还。这是刻意的范围克制——到期回收属于未被要求的产品需求。若日后需要扩展，最贴合现状的路径是惰性判定（借阅时以 `due_at < now` 拦截“已逾期未还”的重复占用），无需引入调度器；更重的定时回收 / 到期事件走 transaction outbox 异步 worker。
 
 ## 三、关系与并发边界（设计要点）
 
