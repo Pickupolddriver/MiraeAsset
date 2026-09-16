@@ -91,9 +91,6 @@ public class LoanService {
         // The loan may have been returned while this transaction waited for the book lock.
         // Refresh it so a concurrent repeated return remains idempotent.
         entityManager.refresh(initialLoan);
-        if (!initialLoan.getUserId().equals(userId)) {
-            throw new ForbiddenOperationException("LOAN_NOT_OWNED_BY_USER", "The loan belongs to another user");
-        }
         if (!initialLoan.isActive()) {
             return LoanResponse.from(initialLoan);
         }
