@@ -135,6 +135,37 @@ class LibraryApiTest {
     }
 
     @Test
+    void adminCanSeeAllActiveLoansAcrossUsers() throws Exception {
+        Book book = bookRepository.save(Book.create("isbn-admin", "Admin Book", "Author", "Description", "Tech", 2));
+
+        mockMvc.perform(post("/api/loans").header("X-User-Id", "user-a")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"bookId\":" + book.getId() + "}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/loans").header("X-User-Id", "user-b")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"bookId\":" + book.getId() + "}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/admin/loans/current")
+                        .header("X-User-Id", "admin-1").header("X-User-Role", "ADMIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[?(@.userId=='user-a')]").exists())
+                .andExpect(jsonPath("$[?(@.userId=='user-b')]").exists());
+    }
+
+    @Test
+    void userRoleIsForbiddenFromAdminEndpoint() throws Exception {
+        Book book = bookRepository.save(Book.create("isbn-forbid", "Forbid Book", "Author", "Description", "Tech", 1));
+        mockMvc.perform(post("/api/loans").header("X-User-Id", "user-a")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"bookId\":" + book.getId() + "}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/admin/loans/current").header("X-User-Id", "user-a"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ADMIN_ROLE_REQUIRED"));
+    }
+
+    @Test
     void cannotReturnAnotherUsersLoan() throws Exception {
         Book book = bookRepository.save(Book.create("isbn-owner", "Owner Book", "Author", "Description", "Tech", 1));
         String response = mockMvc.perform(post("/api/loans")

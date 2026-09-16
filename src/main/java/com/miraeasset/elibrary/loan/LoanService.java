@@ -58,6 +58,14 @@ public class LoanService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<LoanResponse> allCurrentLoans() {
+        return loanRepository.findAllByReturnedAtIsNullOrderByBorrowedAtDesc()
+                .stream()
+                .map(LoanResponse::from)
+                .toList();
+    }
+
     @Transactional
     public LoanResponse returnLoan(String userId, UUID loanId) {
         requireUser(userId);

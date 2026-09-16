@@ -6,7 +6,9 @@ This repository contains a Spring Boot implementation of the Mirae Asset backend
 
 The service is user-facing. It supports browsing books, viewing book details, borrowing a digital license, returning a loan, and listing the current user's active loans. The phrase “currently borrowed books” is interpreted as the requesting user's active loans.
 
-The implementation intentionally does not include administrator APIs, authentication, book catalog management, waitlists, renewals, fines, or digital file storage and streaming. `X-User-Id` is a deliberately small identity boundary for the assignment; a real deployment would replace it with an authenticated principal.
+The implementation intentionally does not include authentication, book catalog management, waitlists, renewals, fines, or digital file storage and streaming. A minimal admin surface — viewing active loans across all users — is included. `X-User-Id` is a deliberately small identity boundary for the assignment; a real deployment would replace it with an authenticated principal.
+
+A management-side reading of "view currently borrowed books" (an operator looking at active loans across all users) is provided by `GET /api/admin/loans/current`. The identity model is `Principal(userId, role)`, resolved from the `X-User-Id` / `X-User-Role` headers; the admin endpoint requires `X-User-Role: ADMIN` and returns `403` otherwise. The design and trade-offs are documented in [docs/architecture.md](docs/architecture.md).
 
 Each book has a finite number of simultaneous digital licenses. This makes the borrow operation meaningful and provides a concurrency boundary. A future product decision may change this to unlimited licenses or add a waitlist.
 
@@ -80,9 +82,13 @@ GET  /api/loans/current
 
 PUT  /api/loans/{loanId}/return
      X-User-Id: user-1
+
+GET  /api/admin/loans/current
+     X-User-Id: admin-1
+     X-User-Role: ADMIN
 ```
 
-Errors use Spring's `ProblemDetail` shape and include a stable application code, such as `BOOK_NOT_FOUND`, `BOOK_UNAVAILABLE`, `ACTIVE_LOAN_ALREADY_EXISTS`, or `LOAN_NOT_OWNED_BY_USER`.
+Errors use Spring's `ProblemDetail` shape and include a stable application code, such as `BOOK_NOT_FOUND`, `BOOK_UNAVAILABLE`, `ACTIVE_LOAN_ALREADY_EXISTS`, `LOAN_NOT_OWNED_BY_USER`, or `ADMIN_ROLE_REQUIRED`.
 
 ## Run and verify
 
@@ -94,6 +100,8 @@ mvn clean verify
 ```
 
 `mvn clean verify` runs unit and integration tests, including a concurrency test where ten users compete for three licenses. It also generates the JaCoCo report at `target/site/jacoco/index.html`.
+
+For measuring a large catalog, the app can batch-seed 5,000+ books (`--app.seed.bulk.enabled=true --app.seed.bulk.count=5000`) and `scripts/benchmark.sh` measures request latency against the running instance. The resulting baseline and conclusions are in [docs/performance-baseline.md](docs/performance-baseline.md). Both are off by default.
 
 ## Concurrency semantics
 
