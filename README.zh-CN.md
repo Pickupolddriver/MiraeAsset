@@ -2,7 +2,7 @@
 
 本仓库是 Mirae Asset 后端 take-home 任务——电子图书馆服务 的 Spring Boot 实现。
 
-> 中文版说明文档。英文原版见 [README.md](README.md)；架构与设计取舍见 [docs/architecture.zh-CN.md](docs/architecture.zh-CN.md)；针对需求的逐项回答与设计说明见 [docs/design-answers.zh-CN.md](docs/design-answers.zh-CN.md)。
+> 中文版说明文档。英文原版见 [README.md](README.md)；架构与设计取舍见 [docs/zh-CN/architecture.md](docs/zh-CN/architecture.md)；针对需求的逐项回答与设计说明见 [docs/zh-CN/design-answers.md](docs/zh-CN/design-answers.md)。
 
 ## 范围（Scope）
 
@@ -10,7 +10,7 @@
 
 实现**有意不包含**：认证、图书目录管理、预约/等待列表（waitlist）、续借、罚款、以及数字文件存储与流媒体。一个**最小的管理面**——查看所有用户活跃借阅——已包含。`X-User-Id` 是本作业刻意采用的最小身份边界；生产环境会替换为经过认证的主体（authenticated principal）。
 
-“查看目前已借阅的书籍”的管理侧语义（运营者查看所有用户的活跃借阅）由 `GET /api/admin/loans/current` 提供。身份模型为 `Principal(userId, role)`，从 `X-User-Id` / `X-User-Role` 请求头解析；该管理接口要求 `X-User-Role: ADMIN`，否则返回 `403`。设计与取舍详见 [docs/architecture.zh-CN.md](docs/architecture.zh-CN.md)。
+“查看目前已借阅的书籍”的管理侧语义（运营者查看所有用户的活跃借阅）由 `GET /api/admin/loans/current` 提供。身份模型为 `Principal(userId, role)`，从 `X-User-Id` / `X-User-Role` 请求头解析；该管理接口要求 `X-User-Role: ADMIN`，否则返回 `403`。设计与取舍详见 [docs/zh-CN/architecture.md](docs/zh-CN/architecture.md)。
 
 每本书有**有限的并发数字授权**。这让借阅操作具有业务含义，也构成了并发的边界。未来产品决策可改为无限授权或加入等待列表。
 
@@ -66,7 +66,7 @@ flowchart TB
     apps --> storage[(Object Storage + Content CDN)]
 ```
 
-生产图刻意与作业实现不同：浏览类流量可使用 Redis 与只读副本，但借阅与归还必须在 PostgreSQL 主库的同一事务中完成；**库存可用性绝不由缓存或滞后的副本决定**。完整图、路由规则、故障边界与取舍见 [docs/architecture.zh-CN.md](docs/architecture.zh-CN.md)。
+生产图刻意与作业实现不同：浏览类流量可使用 Redis 与只读副本，但借阅与归还必须在 PostgreSQL 主库的同一事务中完成；**库存可用性绝不由缓存或滞后的副本决定**。完整图、路由规则、故障边界与取舍见 [docs/zh-CN/architecture.md](docs/zh-CN/architecture.md)。
 
 ## API
 
@@ -104,7 +104,7 @@ mvn clean verify
 
 `mvn clean verify` 依次执行单元测试与集成测试，包括一个“十用户竞争三授权”的并发测试，并生成 JaCoCo 报告 `target/site/jacoco/index.html`。
 
-如需针对大目录测量：应用可用 `--app.seed.bulk.enabled=true --app.seed.bulk.count=5000` 批量灌入 5000+ 本书，然后运行 `scripts/benchmark.sh` 测量运行中实例的请求延迟。测量结果与结论见 [docs/performance-baseline.md](docs/performance-baseline.md)。两者默认关闭。
+如需针对大目录测量：应用可用 `--app.seed.bulk.enabled=true --app.seed.bulk.count=5000` 批量灌入 5000+ 本书，然后运行 `scripts/benchmark.sh` 测量运行中实例的请求延迟。测量结果与结论见 [docs/zh-CN/performance-baseline.md](docs/zh-CN/performance-baseline.md)。两者默认关闭。
 
 ## 并发语义（Concurrency semantics）
 

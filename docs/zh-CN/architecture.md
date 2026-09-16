@@ -2,7 +2,7 @@
 
 本文件描述两套部署方案：作业的轻量部署，以及面向生产的部署。两者目标刻意不同：作业版偏向小型、可解释的代码；生产版拆分读扩展、写一致性、内容分发与运维关注点。
 
-> 中文版。英文原版见 [architecture.md](architecture.md)。针对原始需求逐项的应答与设计取舍，见 [design-answers.zh-CN.md](design-answers.zh-CN.md)。
+> 中文版。英文原版见 [architecture.md](../en/architecture.md)。针对原始需求逐项的应答与设计取舍，见 [design-answers.md](design-answers.md)。
 
 ## 1. 作业架构（Take-home architecture）
 

@@ -8,7 +8,7 @@ The service is user-facing. It supports browsing books, viewing book details, bo
 
 The implementation intentionally does not include authentication, book catalog management, waitlists, renewals, fines, or digital file storage and streaming. A minimal admin surface — viewing active loans across all users — is included. `X-User-Id` is a deliberately small identity boundary for the assignment; a real deployment would replace it with an authenticated principal.
 
-A management-side reading of "view currently borrowed books" (an operator looking at active loans across all users) is provided by `GET /api/admin/loans/current`. The identity model is `Principal(userId, role)`, resolved from the `X-User-Id` / `X-User-Role` headers; the admin endpoint requires `X-User-Role: ADMIN` and returns `403` otherwise. The design and trade-offs are documented in [docs/architecture.md](docs/architecture.md).
+A management-side reading of "view currently borrowed books" (an operator looking at active loans across all users) is provided by `GET /api/admin/loans/current`. The identity model is `Principal(userId, role)`, resolved from the `X-User-Id` / `X-User-Role` headers; the admin endpoint requires `X-User-Role: ADMIN` and returns `403` otherwise. The design and trade-offs are documented in [docs/en/architecture.md](docs/en/architecture.md).
 
 Each book has a finite number of simultaneous digital licenses. This makes the borrow operation meaningful and provides a concurrency boundary. A future product decision may change this to unlimited licenses or add a waitlist.
 
@@ -64,7 +64,7 @@ flowchart TB
     apps --> storage[(Object Storage + Content CDN)]
 ```
 
-The production diagram is intentionally different from the assignment implementation. Browse traffic can use Redis and read replicas, but borrow and return must use the PostgreSQL primary in one transaction. Inventory availability is never decided from a cache or a lagging replica. The complete diagrams, routing rules, failure boundaries, and trade-offs are documented in [docs/architecture.md](docs/architecture.md).
+The production diagram is intentionally different from the assignment implementation. Browse traffic can use Redis and read replicas, but borrow and return must use the PostgreSQL primary in one transaction. Inventory availability is never decided from a cache or a lagging replica. The complete diagrams, routing rules, failure boundaries, and trade-offs are documented in [docs/en/architecture.md](docs/en/architecture.md).
 ## API
 
 Swagger UI is available at `/swagger-ui.html` when the application is running. OpenAPI JSON is available at `/v3/api-docs`.
@@ -101,7 +101,7 @@ mvn clean verify
 
 `mvn clean verify` runs unit and integration tests, including a concurrency test where ten users compete for three licenses. It also generates the JaCoCo report at `target/site/jacoco/index.html`.
 
-For measuring a large catalog, the app can batch-seed 5,000+ books (`--app.seed.bulk.enabled=true --app.seed.bulk.count=5000`) and `scripts/benchmark.sh` measures request latency against the running instance. The resulting baseline and conclusions are in [docs/performance-baseline.md](docs/performance-baseline.md). Both are off by default.
+For measuring a large catalog, the app can batch-seed 5,000+ books (`--app.seed.bulk.enabled=true --app.seed.bulk.count=5000`) and `scripts/benchmark.sh` measures request latency against the running instance. The resulting baseline and conclusions are in [docs/en/performance-baseline.md](docs/en/performance-baseline.md). Both are off by default.
 
 ## Concurrency semantics
 

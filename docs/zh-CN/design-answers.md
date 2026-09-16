@@ -1,8 +1,8 @@
 # 需求应答与设计说明（Design Answers）
 
-> 本文件针对 [initialRequirement.md](initialRequirement.md) 逐项作答：功能覆盖、以及题目强调的六个关注点（应用架构 / 领域模型 / API 设计 / 代码组织 / 错误处理 / 可维护性）。同时说明本作业刻意控制范围的取舍。
+> 本文件针对 [initialRequirement.md](../initialRequirement.md) 逐项作答：功能覆盖、以及题目强调的六个关注点（应用架构 / 领域模型 / API 设计 / 代码组织 / 错误处理 / 可维护性）。同时说明本作业刻意控制范围的取舍。
 >
-> 更多细节见 [README.zh-CN.md](../README.zh-CN.md) 与 [architecture.zh-CN.md](architecture.zh-CN.md)。
+> 更多细节见 [README.zh-CN.md](../../README.zh-CN.md) 与 [architecture.md](architecture.md)。
 
 ## 一、需求覆盖对照
 
@@ -36,7 +36,7 @@
 - 借阅/归还在该行上取 `PESSIMISTIC_WRITE`，同一本书的操作被数据库串行化，不同书可并行。
 - 临界区很小——只有改变授权数的短事务。既避免超卖（oversell），也避免整库串行化。
 
-生产版见 [architecture.zh-CN.md](architecture.zh-CN.md)：读走 Redis + 只读副本，借/还必须走 PostgreSQL 主库同事务，授权决策永不由缓存或滞后副本决定。
+生产版见 [architecture.md](architecture.md)：读走 Redis + 只读副本，借/还必须走 PostgreSQL 主库同事务，授权决策永不由缓存或滞后副本决定。
 
 **为什么行锁而不是分布式锁？** 跨实例的进程内锁（如 JVM `synchronized`）在水平扩展时会失效；而数据库行锁在单实例（作业）与多实例（生产）下天然一致，且代码最简单。只有出现更复杂分配策略（等待列表/FIFO）时，才需要每本书持久的有序序列。
 
@@ -127,7 +127,7 @@ com.miraeasset.elibrary
 - **源代码**：Spring Boot 项目，Java 21，Maven 构建。
 - **README（中英）**：范围、设计、API、运行方式。
 - **架构文档（中英）**：作业部署 + 生产部署、路由规则、故障边界、取舍。
-- **性能基线**：`scripts/benchmark.sh` + `docs/performance-baseline.md`（5000 本书实测 p95/avg/中位，含结论）。
+- **性能基线**：`scripts/benchmark.sh` + `docs/zh-CN/performance-baseline.md`（5000 本书实测 p95/avg/中位，含结论）。
 - **测试**：`mvn clean verify` 17 个测试全绿（含并发不变式测试）。
 
 ## 八、题目备注部分的回应（Notes）
