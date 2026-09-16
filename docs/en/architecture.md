@@ -141,7 +141,7 @@ The take-home implementation was originally user-facing only: every loan endpoin
 
 - A `PrincipalArgumentResolver` parses the identity headers into a small `Principal(userId, role)` record (see `identity/Principal.java` and `identity/Role.java`).
 - `X-User-Id` carries the caller identity; `X-User-Role` carries the role claim and defaults to `USER`.
-- An `AdminController` takes a `Principal` argument and asserts `role == ADMIN` before any management query, returning `403 FORBIDDEN` otherwise.
+- An `AdminRoleInterceptor` registered for `/api/admin/**` enforces centralized, default-deny authorization: a request without `X-User-Role: ADMIN` is rejected with `403 FORBIDDEN`, so new admin handlers are protected without remembering to self-guard.
 - The existing user-facing `LoanController` keeps its `@RequestHeader("X-User-Id") String` bound directly, so the transactional user path is unchanged.
 
 This keeps the read-mostly admin surface disjoint from the transactional user commands, so the two concern sets do not share lock or caching behavior.
@@ -149,12 +149,12 @@ This keeps the read-mostly admin surface disjoint from the transactional user co
 ### Implemented endpoints
 
 ```text
-GET /api/admin/loans/current
+GET /api/admin/loans/current?page=0&size=20
     X-User-Id: admin-1
     X-User-Role: ADMIN
 ```
 
-`GET /api/admin/loans/current` returns the same `LoanResponse` shape as `GET /api/loans/current`, but across all users and ordered by `borrowedAt` descending. It maps to `LoanRepository.findAllByReturnedAtIsNullOrderByBorrowedAtDesc()`, which filters on `returnedAt IS NULL` only, without a `userId` predicate. Because it is read-only on the loan table and does not mutate license counts, it is safe to serve from the primary or a consistent read replica.
+`GET /api/admin/loans/current` returns all users' active loans as a `PageResponse` (same `LoanResponse` shape), paginated by `borrowedAt` descending, with `page`/`size` validated the same way as book paging. It maps to `LoanRepository.findAllByReturnedAtIsNull(Pageable)`, filtering on `returnedAt IS NULL` only, without a `userId` predicate; the batch read uses an `@EntityGraph` to fetch the associated book in one query instead of N+1. Because it is read-only on the loan table and does not mutate license counts, it is safe to serve from the primary or a consistent read replica.
 
 ### Trade-offs captured
 

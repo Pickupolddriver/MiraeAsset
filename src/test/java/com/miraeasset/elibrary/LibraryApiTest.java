@@ -148,9 +148,9 @@ class LibraryApiTest {
         mockMvc.perform(get("/api/admin/loans/current")
                         .header("X-User-Id", "admin-1").header("X-User-Role", "ADMIN"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[?(@.userId=='user-a')]").exists())
-                .andExpect(jsonPath("$[?(@.userId=='user-b')]").exists());
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[?(@.userId=='user-a')]").exists())
+                .andExpect(jsonPath("$.content[?(@.userId=='user-b')]").exists());
     }
 
     @Test

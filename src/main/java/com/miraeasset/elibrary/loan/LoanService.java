@@ -6,11 +6,15 @@ import com.miraeasset.elibrary.common.BusinessConflictException;
 import com.miraeasset.elibrary.common.ForbiddenOperationException;
 import com.miraeasset.elibrary.common.InvalidRequestException;
 import com.miraeasset.elibrary.common.ResourceNotFoundException;
+import com.miraeasset.elibrary.common.dto.PageResponse;
 import com.miraeasset.elibrary.loan.dto.BorrowBookRequest;
 import com.miraeasset.elibrary.loan.dto.LoanResponse;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,11 +63,16 @@ public class LoanService {
     }
 
     @Transactional(readOnly = true)
-    public List<LoanResponse> allCurrentLoans() {
-        return loanRepository.findAllByReturnedAtIsNullOrderByBorrowedAtDesc()
-                .stream()
-                .map(LoanResponse::from)
-                .toList();
+    public PageResponse<LoanResponse> allCurrentLoans(int page, int size) {
+        if (page < 0) {
+            throw new InvalidRequestException("INVALID_PAGE", "page must not be negative");
+        }
+        if (size < 1 || size > 50) {
+            throw new InvalidRequestException("INVALID_PAGE_SIZE", "size must be between 1 and 50");
+        }
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("borrowedAt").descending());
+        Page<Loan> loans = loanRepository.findAllByReturnedAtIsNull(pageRequest);
+        return PageResponse.from(loans.map(LoanResponse::from));
     }
 
     @Transactional

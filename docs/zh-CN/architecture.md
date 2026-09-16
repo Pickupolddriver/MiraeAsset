@@ -143,7 +143,7 @@ flowchart TB
 
 - `PrincipalArgumentResolver` 把身份请求头解析成小的 `Principal(userId, role)` 记录（见 `identity/Principal.java` 与 `identity/Role.java`）。
 - `X-User-Id` 携带调用者身份；`X-User-Role` 携带角色声明，默认 `USER`。
-- `AdminController` 接收 `Principal` 参数，在任何管理查询前断言 `role == ADMIN`，否则返回 `403 FORBIDDEN`。
+- `AdminRoleInterceptor` 注册到 `/api/admin/**`，做**集中、默认拒绝（default-deny）**的鉴权：请求未携带 `X-User-Role: ADMIN` 即返回 `403 FORBIDDEN`。新增管理接口无需自行守卫。
 - 既有用户侧 `LoanController` 仍直接绑定 `@RequestHeader("X-User-Id") String`，事务性用户路径不变。
 
 这样把只读为主的管理面与事务性用户命令解耦，两套关注点不共享锁或缓存行为。
@@ -151,12 +151,12 @@ flowchart TB
 ### 已实现接口（Implemented endpoints）
 
 ```text
-GET /api/admin/loans/current
+GET /api/admin/loans/current?page=0&size=20
     X-User-Id: admin-1
     X-User-Role: ADMIN
 ```
 
-`GET /api/admin/loans/current` 返回与 `GET /api/loans/current` 相同的 `LoanResponse` 结构，但跨所有用户，并按 `borrowedAt` 降序。它映射到 `LoanRepository.findAllByReturnedAtIsNullOrderByBorrowedAtDesc()`，只按 `returnedAt IS NULL` 过滤，不含 `userId` 谓词。因为只读 loan 表、不改变授权数，可安全地从主库或一致的只读副本提供。
+`GET /api/admin/loans/current` 以与 `/api/books` 一致的 `PageResponse` 返回所有用户的活跃借阅（`LoanResponse` 结构），按 `borrowedAt` 降序分页；`page`/`size` 的校验规则与书籍分页相同。它映射到 `LoanRepository.findAllByReturnedAtIsNull(Pageable)`，只按 `returnedAt IS NULL` 过滤，不含 `userId` 谓词；批量读取用 `@EntityGraph` 一次性取回书目，避免 N+1。因为只读 loan 表、不改变授权数，可安全地从主库或一致的只读副本提供。
 
 ### 已记录的取舍（Trade-offs captured）
 

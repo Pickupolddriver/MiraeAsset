@@ -10,8 +10,4 @@ package com.miraeasset.elibrary.identity;
  * @param role   the caller's role, used to guard the management surface
  */
 public record Principal(String userId, Role role) {
-
-    public boolean isAdmin() {
-        return role == Role.ADMIN;
-    }
 }
