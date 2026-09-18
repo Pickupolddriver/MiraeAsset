@@ -4,40 +4,39 @@ This document describes both the small assignment deployment and a production-or
 intentionally have different goals: the assignment favors a small, explainable codebase, while production separates read
 scaling, write consistency, content delivery, and operational concerns.
 
+## 0. Domain model and code organization
+
+Two aggregates carry the domain. `Book` owns catalog metadata and the license counter; `Loan` is an append-only
+borrowing event whose active state is derived, with `dueAt = borrowedAt + 14 days`. The entity diagram, field list, and
+aggregate behaviour live in the [README domain model](../../README.md#domain-model). Code is organised by feature —
+`book`, `loan`, `identity`, `config`, `common` — with the only feature-to-feature dependency being `loan -> book`, so
+the package graph stays acyclic and the HTTP contract is decoupled from the persistence model through per-feature DTOs.
+
+Both designs below must preserve the same domain invariants:
+
+| Id | Invariant |
+| --- | --- |
+| I1 | `book.totalLicenses >= 1` |
+| I2 | `0 <= book.availableLicenses <= book.totalLicenses` |
+| I3 | `count(active loans of a book) = totalLicenses - availableLicenses` |
+| I4 | at most one active loan per `(userId, bookId)` |
+| I5 | a loan is active if and only if `returnedAt == null` |
+| I6 | a returned loan never becomes active again |
+
+I3 and I4 span both aggregates. That is the reason borrow and return hold the book row lock for the whole transaction
+rather than decrementing the counter in isolation, and the reason the assignment keeps read-modify-write instead of a
+single conditional `UPDATE` (see **Trade-offs**).
+
 ## 1. Take-home architecture
 
-```mermaid
-flowchart LR
-    client[Web or API Client]
+The assignment deployment is one Spring Boot process over H2. The component diagram lives in
+[README - Architecture](../../README.md#architecture) and the package layout in
+[README - Code organization](../../README.md#code-organization), so they are not repeated here. This section covers only
+what that view does not: the runtime lock behaviour.
 
-    subgraph app[Spring Boot application]
-        bookController[BookController]
-        loanController[LoanController]
-        bookService[BookService<br/>read-only queries]
-        loanService[LoanService<br/>transactional commands]
-        bookRepo[BookRepository]
-        loanRepo[LoanRepository]
-    end
-
-    h2[(H2 in-memory database)]
-    swagger[Swagger UI<br/>OpenAPI]
-
-    client --> bookController
-    client --> loanController
-    bookController --> bookService
-    loanController --> loanService
-    bookService --> bookRepo
-    loanService --> bookRepo
-    loanService --> loanRepo
-    bookRepo --> h2
-    loanRepo --> h2
-    swagger -. documents .-> bookController
-    swagger -. documents .-> loanController
-
-    lock[Book row lock<br/>PESSIMISTIC_WRITE]
-    loanService -. borrow / return .-> lock
-    lock -. protects .-> h2
-```
+User commands and reads are served by `LoanController` / `BookController`, which delegate to `LoanService`
+(transactional commands) and `BookService` (read-only queries); both are described by the same OpenAPI document served
+at `/swagger-ui.html`. The admin route under `/api/admin/loans` shares `LoanService` but is read-only.
 
 The `Book` row is the concurrency boundary. Borrow and return acquire a short `PESSIMISTIC_WRITE` transaction on that
 row, so operations for the same book are serialized while different books can be processed concurrently. H2 is

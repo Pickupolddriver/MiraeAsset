@@ -5,40 +5,35 @@
 > 中文版。英文原版见 [architecture.md](../en/architecture.md)
 > 。针对原始需求逐项的应答与设计取舍，见 [design-answers.md](design-answers.md)。
 
+## 0. 领域模型与代码组织（Domain model and code organization）
+
+领域由两个聚合承载。`Book` 持有书目元数据与授权计数；`Loan` 是不可变的借阅事件，其活跃状态是推导得出的，且
+`dueAt = borrowedAt + 14 天`。实体图、字段清单与聚合行为见
+[README 领域模型](../../README.zh-CN.md#领域模型domain-model)。代码按功能组织——`book`、`loan`、`identity`、`config`、`common`——唯一的跨功能依赖是
+`loan -> book`，因此包依赖图无环，且 HTTP 契约通过各功能自己的 DTO 与持久化模型解耦。
+
+下面两套设计都必须保持同一组领域不变式：
+
+| 编号 | 不变式 |
+| --- | --- |
+| I1 | `book.totalLicenses >= 1` |
+| I2 | `0 <= book.availableLicenses <= book.totalLicenses` |
+| I3 | 对每本书：`count(活跃借阅) = totalLicenses - availableLicenses` |
+| I4 | 每个 `(userId, bookId)` 至多一条活跃借阅 |
+| I5 | 借阅活跃当且仅当 `returnedAt == null` |
+| I6 | 已归还的借阅不会重新变为活跃 |
+
+I3 与 I4 横跨两个聚合。这正是借阅与归还必须在整个事务期间持有书籍行锁、而不是孤立地扣减计数器的原因，也是作业实现保留“读-改-写”而非改用单条条件
+`UPDATE` 的原因（见下文 **取舍**）。
+
 ## 1. 作业架构（Take-home architecture）
 
-```mermaid
-flowchart LR
-    client[Web or API Client]
+作业部署是一个运行在 H2 之上的 Spring Boot 进程。组件图见
+[README 架构一节](../../README.zh-CN.md#架构architecture)，包结构见
+[README 代码组织一节](../../README.zh-CN.md#代码组织code-organization)，此处不再重复。本节只讲那两张视图没有覆盖的部分：运行时的锁行为。
 
-    subgraph app[Spring Boot application]
-        bookController[BookController]
-        loanController[LoanController]
-        bookService[BookService<br/>只读查询]
-        loanService[LoanService<br/>事务命令]
-        bookRepo[BookRepository]
-        loanRepo[LoanRepository]
-    end
-
-    h2[(H2 in-memory database)]
-    swagger[Swagger UI<br/>OpenAPI]
-
-    client --> bookController
-    client --> loanController
-    bookController --> bookService
-    loanController --> loanService
-    bookService --> bookRepo
-    loanService --> bookRepo
-    loanService --> loanRepo
-    bookRepo --> h2
-    loanRepo --> h2
-    swagger -. documents .-> bookController
-    swagger -. documents .-> loanController
-
-    lock[Book 行锁<br/>PESSIMISTIC_WRITE]
-    loanService -. borrow / return .-> lock
-    lock -. protects .-> h2
-```
+用户侧命令与查询由 `LoanController` / `BookController` 承接，分别委派给 `LoanService`（事务命令）与 `BookService`（只读查询）；两者由同一份 OpenAPI 文档描述，通过
+`/swagger-ui.html` 展示。`/api/admin/loans` 下的管理路由复用 `LoanService`，但只读。
 
 `Book` 行是并发边界。借阅与归还在该行上获取一个短暂的 `PESSIMISTIC_WRITE` 事务，因此对同一本书的操作被串行化，而不同书籍可并发处理。H2
 刻意采用单实例，不作为生产持久化选择。
