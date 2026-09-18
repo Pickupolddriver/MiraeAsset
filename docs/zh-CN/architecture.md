@@ -164,5 +164,5 @@ GET /api/admin/loans/current?page=0&size=20
 
 - **管理面最小且只读。** 只实现管理侧“当前借阅列表”。不做管理端借阅与归还：运营者代用户归还会迫使管理路径取同样的 `PESSIMISTIC_WRITE` 书锁，并重新引入所有权语义。除非出现产品需求，否则不实现。
 - **角色是声明（claim），不是表。** 没有用户注册表，因此 `ADMIN` 是身份声明的属性，而非持久化实体。调用方通过提供 `X-User-Role: ADMIN` 到达管理接口。生产环境会用经认证的主体（OIDC）替换这两个请求头，同时保留参数解析器中的 `Principal` 缝。
-- **身份校验集中化。** 空白、超长或非法 `X-User-Id` / `X-User-Role` 值在 `PrincipalArgumentResolver` 中一次性拒绝，返回 `400` `INVALID_USER` / `INVALID_ROLE`，而非散落在各控制器中。
+- **身份校验集中化。** 空白或超长 `X-User-Id` 在 `PrincipalArgumentResolver` 中返回 `400 INVALID_USER`；`/api/admin/**` 由 `AdminRoleInterceptor` 默认拒绝，缺失或非法 `X-User-Role` 统一返回 `403 ADMIN_ROLE_REQUIRED`，而非散落在各控制器中。
 - **管理读不决定库存。** 与生产路由规则一致，管理端当前借阅查询仅提供信息。若它将来要参与分配决策，则必须移入主库的事务内。

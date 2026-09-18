@@ -54,7 +54,8 @@ class LibraryApiTest {
                 .andExpect(jsonPath("$.content[0].title").value("API Book"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(20))
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.last").value(true));
 
         mockMvc.perform(get("/api/books/{bookId}", book.getId()))
                 .andExpect(status().isOk())
@@ -161,6 +162,15 @@ class LibraryApiTest {
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/admin/loans/current").header("X-User-Id", "user-a"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ADMIN_ROLE_REQUIRED"));
+    }
+
+    @Test
+    void invalidAdminRoleIsForbidden() throws Exception {
+        mockMvc.perform(get("/api/admin/loans/current")
+                        .header("X-User-Id", "user-a")
+                        .header("X-User-Role", "VIEWER"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ADMIN_ROLE_REQUIRED"));
     }

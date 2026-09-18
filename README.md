@@ -115,3 +115,14 @@ an active loan transitions to returned at most once
 ```
 
 If FIFO fairness or automatic allocation after a return becomes a requirement, the next design would add a per-book waitlist with an explicit sequence number. That is intentionally outside this take-home scope.
+
+## Engineering workflow
+
+The implementation is organized around a specification-driven workflow:
+
+1. **Requirement analysis** — clarify scope, assumptions, actors, and non-goals.
+2. **SpecDD** — define domain invariants, API contracts, persistence boundaries, concurrency rules, and acceptance criteria.
+3. **Agentic Coding** — use an AI coding agent to implement scoped changes and tests under human-owned design decisions and review.
+4. **Verification** — run unit, API, concurrency, and coverage checks against the traceability matrix.
+
+The consolidated design entry point is [docs/spec/README.md](docs/spec/README.md). The runtime API specification is available through Swagger UI at `/swagger-ui.html` and OpenAPI JSON at `/v3/api-docs`.

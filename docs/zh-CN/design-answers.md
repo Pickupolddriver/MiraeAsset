@@ -81,7 +81,7 @@ GET    /api/admin/loans/current              管理侧：所有用户活跃借�
 ### 校验与错误契约（见 §五）
 
 - 分页参数显式校验（`page≥0`、`1≤size≤50`）。
-- 返回显式 `PageResponse` 封装（content/page/size/totalElements），不暴露 Spring Data `PageImpl`，保持契约稳定。
+- 返回显式 `PageResponse` 封装（content/page/size/totalElements/totalPages/last），不暴露 Spring Data `PageImpl`，保持契约稳定。
 - 身份校验集中在 `PrincipalArgumentResolver`（`X-User-Id` / `X-User-Role`），一次拒绝非法值。
 
 ## 五、错误处理（Error Handling）
@@ -93,7 +93,9 @@ GET    /api/admin/loans/current              管理侧：所有用户活跃借�
 | 资源不存在 | 404 | `BOOK_NOT_FOUND`, `LOAN_NOT_FOUND` |
 | 业务冲突 | 409 | `ACTIVE_LOAN_ALREADY_EXISTS`, `BOOK_UNAVAILABLE` |
 | 非本人借阅 / 非 ADMIN | 403 | `LOAN_NOT_OWNED_BY_USER`, `ADMIN_ROLE_REQUIRED` |
-| 输入非法（含分页、畸形 JSON、类型不匹配、请求头缺失/非法） | 400 | `INVALID_REQUEST`, `INVALID_PAGE`, `INVALID_USER`, `INVALID_ROLE` |
+| 输入非法（含分页、畸形 JSON、类型不匹配、普通用户身份头非法） | 400 | `INVALID_REQUEST`, `INVALID_PAGE`, `INVALID_USER` |
+
+管理员接口由 `AdminRoleInterceptor` 默认拒绝：缺失或非法的 `X-User-Role` 不会进入 Controller，而是统一返回 `403 ADMIN_ROLE_REQUIRED`。`INVALID_ROLE` 保留为 `PrincipalArgumentResolver` 对未来其他 Principal 接口的防御性错误码。
 
 设计要点：
 

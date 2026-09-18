@@ -118,3 +118,13 @@ an active loan transitions to returned at most once
 ```
 
 如果需要 FIFO 公平或归还后自动分配，下一步设计会在每本书上加一个带显式序号（sequence number）的等待列表（waitlist）。该能力刻意不在本次作业范围内。
+## 工程流程（Engineering workflow）
+
+本项目采用规格驱动的开发流程：
+
+1. **需求分析**：明确范围、角色、假设和非目标。
+2. **SpecDD**：定义领域不变式、API 契约、持久化边界、并发规则和验收标准。
+3. **Agentic Coding**：在设计决策和代码评审由人负责的前提下，使用 AI coding agent 按规格实现代码与测试。
+4. **验证**：通过单元测试、API 测试、并发测试和覆盖率检查验证实现。
+
+完整入口见 [docs/spec/README.md](docs/spec/README.md)，需求—设计—代码—测试追踪见 [docs/spec/04-traceability-matrix.md](docs/spec/04-traceability-matrix.md)。
