@@ -1,13 +1,17 @@
 # 数据库设计文档（Database Design）
 
-> 本文件描述本系统的**持久化模型设计**（Database Design）。设计顺序是**先定 schema，后写实现**：下表列、类型、约束、索引即权威设计；JPA 实体（[Book.java](../../src/main/java/com/miraeasset/elibrary/book/Book.java)、[Loan.java](../../src/main/java/com/miraeasset/elibrary/loan/Loan.java)）是对它的实现，二者保持一致。
+> 本文件描述本系统的 **持久化模型设计**（Database Design）。设计顺序是 **先定 schema，后写实现**：下表列、类型、约束、索引即权威设计；JPA
+> 实体（[Book.java](../../src/main/java/com/miraeasset/elibrary/book/Book.java)、[Loan.java](../../src/main/java/com/miraeasset/elibrary/loan/Loan.java)
+> ）是对它的实现，二者保持一致。
 >
-> 本次作业为快速原型，运行在 **H2 内存库**（`jdbc:h2:mem:elibrary;DB_CLOSE_DELAY=-1;MODE=PostgreSQL`，见 [application.yml](../../src/main/resources/application.yml)），`ddl-auto: create-drop`，由 Hibernate 依据实体在启动时生成本设计的等价 DDL；故 schema 的最终落地出自实现，但**语义以本设计文档为准**。MODE=PostgreSQL 保证生产切换 PostgreSQL 主库时语义一致。
+> 本次作业为快速原型，运行在 **H2 内存库**（`jdbc:h2:mem:elibrary;DB_CLOSE_DELAY=-1;MODE=PostgreSQL`
+> ，见 [application.yml](../../src/main/resources/application.yml)），`ddl-auto: create-drop`，由 Hibernate 依据实体在启动时生成本设计的等价
+> DDL；故 schema 的最终落地出自实现，但 **语义以本设计文档为准**。MODE=PostgreSQL 保证生产切换 PostgreSQL 主库时语义一致。
 
 ## 一、概述
 
 - 两张表：`books`（书目 + 授权计数）、`loans`（借阅记录）。
-- 无用户注册表：`userId` 与角色在 `identity.Principal` 中以**声明（header）形式**传递，是身份边界而非外键。
+- 无用户注册表：`userId` 与角色在 `identity.Principal` 中以 **声明（header）形式**传递，是身份边界而非外键。
 - 无显式 `status` 状态列：Loan 的活跃状态由 `returnedAt IS NULL` **推导**，避免状态字段与时间戳不一致。
 
 ## 二、表结构
@@ -16,16 +20,16 @@
 
 对应实体：[Book.java](../../src/main/java/com/miraeasset/elibrary/book/Book.java)
 
-| 列 | 类型（PostgreSQL 方言） | 约束 | 说明 |
-|---|---|---|---|
-| `id` | BIGINT | PK, auto | 自增主键 `IDENTITY` |
-| `isbn` | VARCHAR(20) | **NOT NULL, UNIQUE** | 唯一图书标识 |
-| `title` | VARCHAR(200) | NOT NULL | 书名（搜索字段） |
-| `author` | VARCHAR(120) | NOT NULL | 作者（搜索字段） |
-| `description` | VARCHAR(2000) | NOT NULL | 简介 |
-| `category` | VARCHAR(100) | NOT NULL | 分类（过滤字段） |
-| `total_licenses` | INT | NOT NULL | 授权总数 |
-| `available_licenses` | INT | NOT NULL | 可用授权数（域不变式约束见下） |
+| 列                   | 类型（PostgreSQL 方言） | 约束                 | 说明                           |
+|----------------------|-------------------------|----------------------|--------------------------------|
+| `id`                 | BIGINT                  | PK, auto             | 自增主键 `IDENTITY`            |
+| `isbn`               | VARCHAR(20)             | **NOT NULL, UNIQUE** | 唯一图书标识                   |
+| `title`              | VARCHAR(200)            | NOT NULL             | 书名（搜索字段）               |
+| `author`             | VARCHAR(120)            | NOT NULL             | 作者（搜索字段）               |
+| `description`        | VARCHAR(2000)           | NOT NULL             | 简介                           |
+| `category`           | VARCHAR(100)            | NOT NULL             | 分类（过滤字段）               |
+| `total_licenses`     | INT                     | NOT NULL             | 授权总数                       |
+| `available_licenses` | INT                     | NOT NULL             | 可用授权数（域不变式约束见下） |
 
 ```sql
 CREATE TABLE books (
@@ -41,20 +45,21 @@ CREATE TABLE books (
 );
 ```
 
-**域不变式**（源码层保证）：`0 <= available_licenses <= total_licenses`，由聚合方法 `borrowLicense()` / `returnLicense()` 维护，不依赖数据库约束。
+**域不变式**（源码层保证）：`0 <= available_licenses <= total_licenses`，由聚合方法 `borrowLicense()` / `returnLicense()`
+维护，不依赖数据库约束。
 
 ### 2.2 `loans` — 借阅记录
 
 对应实体：[Loan.java](../../src/main/java/com/miraeasset/elibrary/loan/Loan.java)
 
-| 列 | 类型（PostgreSQL 方言） | 约束 | 说明 |
-|---|---|---|---|
-| `id` | UUID | PK | 由应用生成（`GenerationType.UUID`） |
-| `book_id` | BIGINT | **NOT NULL, FK → books.id** | 被借书目，懒加载 |
-| `user_id` | VARCHAR(100) | NOT NULL | 借阅者（身份边界，非 FK） |
-| `borrowed_at` | TIMESTAMP WITH TIME ZONE | NOT NULL | UTC 时刻（`Instant`） |
-| `due_at` | TIMESTAMP WITH TIME ZONE | NOT NULL | `borrowed_at + 14 天` 推导（**软约束，当前不强制**，见下） |
-| `returned_at` | TIMESTAMP WITH TIME ZONE | NULL 表示活跃 | 归还时刻 |
+| 列            | 类型（PostgreSQL 方言）  | 约束                        | 说明                                                       |
+|---------------|--------------------------|-----------------------------|------------------------------------------------------------|
+| `id`          | UUID                     | PK                          | 由应用生成（`GenerationType.UUID`）                        |
+| `book_id`     | BIGINT                   | **NOT NULL, FK → books.id** | 被借书目，懒加载                                           |
+| `user_id`     | VARCHAR(100)             | NOT NULL                    | 借阅者（身份边界，非 FK）                                  |
+| `borrowed_at` | TIMESTAMP WITH TIME ZONE | NOT NULL                    | UTC 时刻（`Instant`）                                      |
+| `due_at`      | TIMESTAMP WITH TIME ZONE | NOT NULL                    | `borrowed_at + 14 天` 推导（**软约束，当前不强制**，见下） |
+| `returned_at` | TIMESTAMP WITH TIME ZONE | NULL 表示活跃               | 归还时刻                                                   |
 
 ```sql
 CREATE TABLE loans (
@@ -68,45 +73,52 @@ CREATE TABLE loans (
 );
 ```
 
-**Loan 的主键用 UUID 而非自增**：避免将 `book_id`（千级）连同自增 id 暴露在 URI 中，杜绝借阅记录被顺序枚举；归还/详情通过该不透明 id 定位，避免逐号遍历。
+**Loan 的主键用 UUID 而非自增**：避免将 `book_id`（千级）连同自增 id 暴露在 URI 中，杜绝借阅记录被顺序枚举；归还/详情通过该不透明
+id 定位，避免逐号遍历。
 
-**`due_at` 是软约束，当前不强制执行**：`isActive()` 只以 `returned_at IS NULL` 判定，`due_at` 不参与任何查询或借/还判责，也不存在定时回收任务。一个逾期未归的借阅会持续占用授权，直到用户手动归还。这是刻意的范围克制——到期回收属于未被要求的产品需求。若日后需要扩展，最贴合现状的路径是惰性判定（借阅时以 `due_at < now` 拦截“已逾期未还”的重复占用），无需引入调度器；更重的定时回收 / 到期事件走 transaction outbox 异步 worker。
+**`due_at` 是软约束，当前不强制执行**：`isActive()` 只以 `returned_at IS NULL` 判定，`due_at`
+不参与任何查询或借/还判责，也不存在定时回收任务。一个逾期未归的借阅会持续占用授权，直到用户手动归还。这是刻意的范围克制——到期回收属于未被要求的产品需求。若日后需要扩展，最贴合现状的路径是惰性判定（借阅时以
+`due_at < now` 拦截“已逾期未还”的重复占用），无需引入调度器；更重的定时回收 / 到期事件走 transaction outbox 异步 worker。
 
 ## 三、关系与并发边界（设计要点）
 
 - **多对一**：`Loan → Book`，每个 `Loan.book_id` 指向一本书。
 - **并发边界是 `Book` 行**：借阅/归还通过 `BookRepository.findByIdForUpdate()` 取 `PESSIMISTIC_WRITE`：
-  - 同一本书的操作被数据库行锁**串行化** → 避免超卖授权；
-  - 不同书可并行 → 不做整库级锁。
-- 借阅事务内的另一次**存在性校验**：`LoanRepository.existsByBookIdAndUserIdAndReturnedAtIsNull(...)` 保证“每用户每书只有一个活跃借阅”（业务冲突 409，非数据库唯一约束 —— 刻意用应用语义而非复合唯一约束，以保留借阅历史多行）。
+    - 同一本书的操作被数据库行锁 **串行化** → 避免超卖授权；
+    - 不同书可并行 → 不做整库级锁。
+- 借阅事务内的另一次 **存在性校验**：`LoanRepository.existsByBookIdAndUserIdAndReturnedAtIsNull(...)`
+  保证“每用户每书只有一个活跃借阅”（业务冲突 409，非数据库唯一约束 —— 刻意用应用语义而非复合唯一约束，以保留借阅历史多行）。
 
 ## 四、索引设计
 
 ### 4.1 现状（由主键 / 唯一 / 外键约束隐式生成）
 
-| 表 | 索引 | 覆盖的查询 |
-|---|---|---|
-| `books` | `pk_books(id)` | 详情 `findById`、行锁 `findByIdForUpdate` |
-| `books` | `uk_books_isbn` | 唯一约束（当前无独立按 isbn 查询） |
-| `loans` | `pk_loans(id)` | 详情、归还 `findById` |
-| `loans` | 隐式外键索引 `fk_loans_book(book_id)` | `existsByBookId...` |
-| `loans` | 隐式外键/持久化关联索引 | `book.fetch` 关联加载 |
+| 表      | 索引                                  | 覆盖的查询                                |
+|---------|---------------------------------------|-------------------------------------------|
+| `books` | `pk_books(id)`                        | 详情 `findById`、行锁 `findByIdForUpdate` |
+| `books` | `uk_books_isbn`                       | 唯一约束（当前无独立按 isbn 查询）        |
+| `loans` | `pk_loans(id)`                        | 详情、归还 `findById`                     |
+| `loans` | 隐式外键索引 `fk_loans_book(book_id)` | `existsByBookId...`                       |
+| `loans` | 隐式外键/持久化关联索引               | `book.fetch` 关联加载                     |
 
 ### 4.2 潜在热点与建议索引（随规模增长）
 
-以下索引**当前未实现**，仅在数据量增长后需要；写这一节是为了给定扩展路径（对应 performance-baseline 观察）。
+以下索引 **当前未实现**，仅在数据量增长后需要；写这一节是为了给定扩展路径（对应 performance-baseline 观察）。
 
-| # | 索引 | 建议 | 理由 |
-|---|---|---|---|
+| # | 索引                             | 建议                                                     | 理由                                                                                                                                                                                                           |
+|---|----------------------------------|----------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 1 | `books(title)` / `books(author)` | **不适用 B-tree**，需 `lower(title) LIKE '%…%'` 前缀通配 | 浏览搜索走**全表扫描**，是当前最贵读操作（p95 24.9ms/5k 本）。扩展首选：pg_trgm 的 GIN 表达式索引（`gin (lower(title) gin_trgm_ops)`）或用全文检索（`tsvector` / 外部共搜索引擎）。H2 无现成等价物，故保持扫描 |
-| 2 | `books(category)` | 当分类过滤成为独立高频入口时 | 当前与 `q` 联查，选择性收益小 |
-| 3 | `loans(returned_at, user_id)` | **需要** | 管理视图 `findAllByReturnedAtIsNull` 扫全表；借阅历史增多后 `returned_at` 过滤应走索引 |
-| 4 | `loans(user_id, returned_at)` | **需要** | 用户侧 `findByUserIdAndReturnedAtIsNullOrderByBorrowedAtDesc` 按 `userId` + `returned_at IS NULL` 过滤并按 `borrowed_at` 排序 |
+| 2 | `books(category)`                | 当分类过滤成为独立高频入口时                             | 当前与 `q` 联查，选择性收益小                                                                                                                                                                                  |
+| 3 | `loans(returned_at, user_id)`    | **需要**                                                 | 管理视图 `findAllByReturnedAtIsNull` 扫全表；借阅历史增多后 `returned_at` 过滤应走索引                                                                                                                         |
+| 4 | `loans(user_id, returned_at)`    | **需要**                                                 | 用户侧 `findByUserIdAndReturnedAtIsNullOrderByBorrowedAtDesc` 按 `userId` + `returned_at IS NULL` 过滤并按 `borrowed_at` 排序                                                                                  |
 
-**准入判断**：当前 5,003 本书、借阅量极小 → 无索引也所有读操作 p95 < 10ms（管理视图同理）。索引只在实测出现可感知退化后、且为 PT-上的高频路径才引入，避免无谓写放大与维护成本。
+**准入判断**：当前 5,003 本书、借阅量极小 → 无索引也所有读操作 p95 < 10ms（管理视图同理）。索引只在实测出现可感知退化后、且为
+PT-上的高频路径才引入，避免无谓写放大与维护成本。
 
 ## 五、运行期行为注记
 
 - **H2 内存，冷启动**：每次重启重建 schema 并 `DataSeeder` 灌入 3 本精选书；`app.seed.bulk.*` 可开启批量生成（基准测试用，默认关）。
-- **时间**：全部 `TIMESTAMP WITH TIME ZONE` 存 UTC `Instant`，由可注入的 `Clock` 提供，保证测试确定性；`due_at` 为推导列（14 天）。
-- **生产形态**：见 [architecture.md](architecture.md) —— 写路径（借/还）必须走 PostgreSQL 主库同事务；浏览交给只读副本 + 缓存。本 schema 与 `MODE=PostgreSQL` 直接适配。
+- **时间**：全部 `TIMESTAMP WITH TIME ZONE` 存 UTC `Instant`，由可注入的 `Clock` 提供，保证测试确定性；`due_at` 为推导列（14
+  天）。
+- **生产形态**：见 [architecture.md](architecture.md) —— 写路径（借/还）必须走 PostgreSQL 主库同事务；浏览交给只读副本 +
+  缓存。本 schema 与 `MODE=PostgreSQL` 直接适配。

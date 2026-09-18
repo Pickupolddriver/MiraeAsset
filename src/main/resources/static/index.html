@@ -34,7 +34,10 @@
                 <h1>Open a new<br><em>point of view.</em></h1>
                 <p class="hero-description">A focused collection of ideas, methods and stories — ready when you are.</p>
                 <div class="search-wrap">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 5 5"></path></svg>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="6.5"></circle>
+                        <path d="m16 16 5 5"></path>
+                    </svg>
                     <input id="search-input" type="search" placeholder="Search by title or author" autocomplete="off">
                     <button id="search-button" class="search-button" type="button">Search</button>
                 </div>
@@ -50,7 +53,8 @@
                     <span class="hero-card-line"></span>
                     <small>Ideas compound.</small>
                 </div>
-                <span class="art-dot dot-one"></span><span class="art-dot dot-two"></span><span class="art-dot dot-three"></span>
+                <span class="art-dot dot-one"></span><span class="art-dot dot-two"></span><span
+                    class="art-dot dot-three"></span>
             </div>
         </section>
 
@@ -61,7 +65,8 @@
                         <p class="eyebrow">THE COLLECTION</p>
                         <h2>Explore the library</h2>
                     </div>
-                    <div class="catalog-meta"><span id="result-count">0 titles</span><span class="meta-divider"></span><span id="page-label">Page 1</span></div>
+                    <div class="catalog-meta"><span id="result-count">0 titles</span><span
+                            class="meta-divider"></span><span id="page-label">Page 1</span></div>
                 </div>
                 <div id="category-filters" class="category-filters" role="list" aria-label="Book categories">
                     <button class="filter-chip selected" data-category="" type="button">All titles</button>
@@ -80,19 +85,22 @@
 
             <aside id="shelf" class="shelf-panel">
                 <div class="shelf-heading">
-                    <div><p class="eyebrow">YOUR READING SPACE</p><h2>My shelf</h2></div>
+                    <div><p class="eyebrow">YOUR READING SPACE</p>
+                        <h2>My shelf</h2></div>
                     <span class="shelf-icon" aria-hidden="true">↗</span>
                 </div>
                 <p class="shelf-intro">Your active digital loans, kept close at hand.</p>
                 <div id="loan-list" class="loan-list" aria-live="polite">
-                    <div class="empty-state"><span class="empty-symbol">＋</span><strong>Your shelf is open.</strong><span>Borrow a title to start reading.</span></div>
+                    <div class="empty-state"><span class="empty-symbol">＋</span><strong>Your shelf is
+                        open.</strong><span>Borrow a title to start reading.</span></div>
                 </div>
                 <div class="shelf-footer"><span>Loans are held for 14 days</span><span class="footer-rule"></span></div>
             </aside>
         </section>
     </main>
 
-    <footer class="site-footer"><span>© 2026 MIRAE ASSET E-LIBRARY</span><span>PERMANENTLY CURIOUS <b>↗</b></span></footer>
+    <footer class="site-footer"><span>© 2026 MIRAE ASSET E-LIBRARY</span><span>PERMANENTLY CURIOUS <b>↗</b></span>
+    </footer>
 </div>
 
 <div id="book-modal" class="modal" hidden>
@@ -105,7 +113,8 @@
         <p id="modal-author" class="modal-author"></p>
         <div class="modal-facts"><span id="modal-category"></span><span id="modal-isbn"></span></div>
         <p id="modal-description" class="modal-description"></p>
-        <div class="modal-availability"><span>Digital availability</span><strong id="modal-availability-value"></strong></div>
+        <div class="modal-availability"><span>Digital availability</span><strong id="modal-availability-value"></strong>
+        </div>
         <button id="borrow-button" class="primary-button" type="button">Borrow this title <span>↗</span></button>
     </section>
 </div>

@@ -2,7 +2,6 @@
 
 本目录记录电子图书馆服务从需求分析到实现验证的规格化设计。它把原始需求、领域规则、API 契约、验收标准和测试映射串联起来，作为开发与评审的共同入口。
 
-
 ## 1. 开发链路
 
 ```text
@@ -15,13 +14,13 @@ Agentic Coding：按规格拆分任务并实现
 自动化验证：单元测试、API 测试、并发测试、覆盖率
 ```
 
-| 阶段 | 主要产物 | 目的 |
-|---|---|---|
-| 需求分析 | [01-requirement-analysis.md](01-requirement-analysis.md) | 澄清范围、角色、假设和非目标 |
-| 系统规格 | [02-system-spec.md](02-system-spec.md) | 定义领域不变式、事务边界和错误语义 |
-| API 契约 | [03-api-contract.md](03-api-contract.md) | 定义接口、请求、响应和状态码 |
-| 验收追踪 | [04-traceability-matrix.md](04-traceability-matrix.md) | 将需求映射到代码和测试 |
-| 详细设计 | [../zh-CN/architecture.md](../zh-CN/architecture.md)、[../zh-CN/database-design.md](../zh-CN/database-design.md) | 记录架构、数据库和生产演进方案 |
+| 阶段     | 主要产物                                                                                                         | 目的                               |
+|----------|------------------------------------------------------------------------------------------------------------------|------------------------------------|
+| 需求分析 | [01-requirement-analysis.md](01-requirement-analysis.md)                                                         | 澄清范围、角色、假设和非目标       |
+| 系统规格 | [02-system-spec.md](02-system-spec.md)                                                                           | 定义领域不变式、事务边界和错误语义 |
+| API 契约 | [03-api-contract.md](03-api-contract.md)                                                                         | 定义接口、请求、响应和状态码       |
+| 验收追踪 | [04-traceability-matrix.md](04-traceability-matrix.md)                                                           | 将需求映射到代码和测试             |
+| 详细设计 | [../zh-CN/architecture.md](../zh-CN/architecture.md)、[../zh-CN/database-design.md](../zh-CN/database-design.md) | 记录架构、数据库和生产演进方案     |
 
 ## 2. 与现有文档的关系
 

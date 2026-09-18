@@ -51,6 +51,7 @@ function friendlyMessage(error) {
     };
     return messages[error.code] || error.message;
 }
+
 function renderBooks() {
     const grid = $('#book-grid');
     $('#result-count').textContent = `${state.totalElements || 0} ${state.totalElements === 1 ? 'title' : 'titles'}`;
@@ -135,6 +136,7 @@ async function refreshLibrary() {
     await loadLoans();
     await loadBooks();
 }
+
 async function openBook(bookId) {
     try {
         state.activeBook = await api(`/api/books/${bookId}`);
@@ -156,7 +158,10 @@ async function openBook(bookId) {
 
 async function borrowBook() {
     if (!state.activeBook) return;
-    if (!userId()) { showToast('Enter a reader identity first.', true); return; }
+    if (!userId()) {
+        showToast('Enter a reader identity first.', true);
+        return;
+    }
     const button = $('#borrow-button');
     const borrowedTitle = state.activeBook.title;
     button.disabled = true;
@@ -188,20 +193,57 @@ async function returnLoan(loanId, button) {
     }
 }
 
-function closeModal() { $('#book-modal').hidden = true; document.body.style.overflow = ''; state.activeBook = null; }
-function formatDate(value) { return new Intl.DateTimeFormat('en', {month: 'short', day: 'numeric'}).format(new Date(value)); }
-function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[char])); }
+function closeModal() {
+    $('#book-modal').hidden = true;
+    document.body.style.overflow = '';
+    state.activeBook = null;
+}
 
-function search() { state.query = $('#search-input').value.trim(); state.page = 0; loadBooks(); }
+function formatDate(value) {
+    return new Intl.DateTimeFormat('en', {month: 'short', day: 'numeric'}).format(new Date(value));
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+    }[char]));
+}
+
+function search() {
+    state.query = $('#search-input').value.trim();
+    state.page = 0;
+    loadBooks();
+}
 
 $('#search-button').addEventListener('click', search);
-$('#search-input').addEventListener('keydown', (event) => { if (event.key === 'Enter') search(); });
-$('#previous-page').addEventListener('click', () => { if (state.page > 0) { state.page--; loadBooks(); } });
-$('#next-page').addEventListener('click', () => { if (state.page < state.totalPages - 1) { state.page++; loadBooks(); } });
+$('#search-input').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') search();
+});
+$('#previous-page').addEventListener('click', () => {
+    if (state.page > 0) {
+        state.page--;
+        loadBooks();
+    }
+});
+$('#next-page').addEventListener('click', () => {
+    if (state.page < state.totalPages - 1) {
+        state.page++;
+        loadBooks();
+    }
+});
 $('#borrow-button').addEventListener('click', borrowBook);
 document.querySelectorAll('[data-close-modal]').forEach((element) => element.addEventListener('click', closeModal));
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !$('#book-modal').hidden) closeModal(); });
-$('#user-id').addEventListener('change', () => { localStorage.setItem('elibrary-user-id', userId()); refreshLibrary(); });
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !$('#book-modal').hidden) closeModal();
+});
+$('#user-id').addEventListener('change', () => {
+    localStorage.setItem('elibrary-user-id', userId());
+    refreshLibrary();
+});
 document.querySelectorAll('[data-category]').forEach((button) => button.addEventListener('click', () => {
     state.category = button.dataset.category;
     state.page = 0;
